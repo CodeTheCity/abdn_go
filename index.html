@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Union Street Exploration</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+</head>
+
+<body>
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-3">
+                <h4>Filters:</h4>
+                <div>
+                    <input type="checkbox" id="restaurants" checked> Restaurants<br>
+                    <input type="checkbox" id="attractions" checked> Attractions<br>
+                    <input type="checkbox" id="bars" checked> Bars<br>
+                    <input type="checkbox" id="cafes" checked> Cafes<br>
+
+                </div>
+            </div>
+            <div class="col-md-9">
+                <h2 class="text-center">Explore Union Street, Aberdeen</h2>
+                <div id="map" style="height: 500px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- jQuery, Bootstrap JS, and Leaflet JS -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="app.js"></script> <!-- Our custom JS -->
+</body>
+
+</html>
