@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pub Crawl Planner</title>
+    <!-- Include Leaflet CSS and JavaScript -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <!-- Include Leaflet Routing Machine CSS and JavaScript -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-routing-machine/dist/leaflet-routing-machine.css" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
+    <style>
+        /* Basic page styling */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+
+        #container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header styling */
+        header {
+            text-align: center;
+            background-color: #333;
+            color: #fff;
+            padding: 10px 0;
+        }
+
+        header h1 {
+            margin: 0;
+        }
+
+        /* Map and form container */
+        #map-container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Map styling */
+        #map {
+            height: 500px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Form and button styling */
+        h2 {
+            font-size: 24px;
+        }
+
+        form {
+            margin-bottom: 20px;
+        }
+
+        label {
+            font-weight: bold;
+        }
+
+        .checkbox-container {
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        .checkbox-item {
+            flex: 1;
+            margin-right: 10px;
+        }
+
+        /* Style for the "pubs" checkboxes */
+        .pubs-checkbox {
+            display: inline-block;
+        }
+
+        button {
+            background-color: #333;
+            color: #fff;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #555;
+        }
+
+        /* Add this CSS to control the scrollable box size */
+        .checkbox-scroll-container {
+            max-height: 200px; /* Adjust the height as needed */
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 20px;
+        }
+    </style>
+    <!-- Add a Favicon -->
+    <link rel="icon" type="image/x-icon" href="https://raw.githubusercontent.com/CodeTheCity/Moderdeen/main/PubCrawl/favicon.ico" />
+</head>
+<body>
+    <header>
+        <h1>Pub Crawler Planner</h1>
+    </header>
+    <div id="container">
+        <div id="map-container">
+            <h2>Select Locations to Plot</h2>
+            <form id="locationForm">
+                <!-- Checkboxes for other locations -->
+                <div class="checkbox-scroll-container">
+                    <!-- "Pubs" checkboxes will be dynamically added here with the .pubs-checkbox class -->
+                </div>
+            </form>
+            <!-- Update the button label to "Create Route" -->
+            <button type="button" onclick="createRoute()">Create Route</button>
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize the map
+        var map = L.map('map').setView([57.1459838, -2.0978495], 13);
+
+        // Add OpenStreetMap tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        var geojsonLayer;
+
+        // Fetch and process GeoJSON data
+        fetch('https://raw.githubusercontent.com/CodeTheCity/Moderdeen/main/PubCrawl/export.geojson')
+            .then(response => response.json())
+            .then(data => {
+                geojsonLayer = L.geoJSON(data.features).addTo(map);
+
+                // Create checkboxes for each location
+                var locationForm = document.getElementById('locationForm');
+                data.features.forEach(feature => {
+                    if (feature.properties && feature.properties.name) {
+                        var checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.name = 'location';
+                        checkbox.value = JSON.stringify(feature.geometry.coordinates);
+                        checkbox.id = 'location-' + feature.properties['@id'];
+
+                        var label = document.createElement('label');
+                        label.htmlFor = checkbox.id;
+                        label.appendChild(document.createTextNode(feature.properties.name));
+
+                        var br = document.createElement('br');
+
+                        locationForm.querySelector('.checkbox-scroll-container').appendChild(checkbox);
+                        locationForm.querySelector('.checkbox-scroll-container').appendChild(label);
+                        locationForm.querySelector('.checkbox-scroll-container').appendChild(br);
+                    }
+                });
+            })
+            .catch(error => {
+                console.error('Error fetching GeoJSON data:', error);
+            });
+
+        // Function to create a route between selected locations
+        function createRoute() {
+            // Get selected checkboxes
+            var selectedCheckboxes = document.querySelectorAll('input[name="location"]:checked');
+
+            // Extract coordinates from selected checkboxes
+            var coordinates = [];
+            selectedCheckboxes.forEach(function (checkbox) {
+                coordinates.push(JSON.parse(checkbox.value));
+            });
+
+            // Check if there are at least two selected locations to create a route
+            if (coordinates.length < 2) {
+                alert("Select at least two locations to create a route.");
+                return;
+            }
+
+            // Remove the existing geojsonLayer from the map
+            if (geojsonLayer) {
+                map.removeLayer(geojsonLayer);
+            }
+
+            // Initialize the routing control
+            var control = L.Routing.control({
+                waypoints: coordinates.map(function (coord) {
+                    return L.latLng(coord[1], coord[0]);
+                }),
+                routeWhileDragging: true,
+            }).addTo(map);
+
+            // Add a button to reset the map and show all the pubs again
+            var resetButton = document.createElement('button');
+            resetButton.textContent = 'Reset Map';
+            resetButton.onclick = function () {
+                // Remove the routing control
+                map.removeControl(control);
+
+                // Add back the geojsonLayer to show all pubs
+                if (geojsonLayer) {
+                    geojsonLayer.addTo(map);
+                }
+            };
+            document.getElementById('map-container').appendChild(resetButton);
+        }
+    </script>
+</body>
+</html>
